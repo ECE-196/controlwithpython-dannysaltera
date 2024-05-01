@@ -1,4 +1,39 @@
 from __future__ import annotations
+from serial import Serial, SerialException
+from serial.tools.list_ports import comports
+import tkinter as tk
+from tkinter import ttk
+from tkinter.messagebox import showerror
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.ser = None
+        self.title("LED Blinker")
+        self.port = tk.StringVar()
+        self.led = tk.BooleanVar(value=False)
+        
+        ports = [port.device for port in comports()]
+        self.port.set(ports[0] if ports else '')
+        ttk.OptionMenu(self, self.port, self.port.get(), *ports).pack()
+        
+        ttk.Checkbutton(self, text='Toggle LED', variable=self.led, command=self.update_led).pack()
+        ttk.Button(self, text='Connect', command=self.connect).pack()
+        ttk.Button(self, text='Disconnect', command=self.disconnect).pack()
+
+    def connect(self):
+        try:
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+            self.ser = Serial(self.port.get(), 9600)
+        except SerialException as e:
+            showerror('Serial Error', str(e))
+
+    def disconnect(self):
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+        self.ser = None
+from __future__ import annotations
 from threading import Thread, Lock
 from serial import Serial, SerialException
 from serial.tools.list_ports import comports
@@ -99,3 +134,14 @@ class App(tk.Tk):
 if __name__ == '__main__':
     with App() as app:
         app.mainloop()
+    def update_led(self):
+        if self.ser and self.ser.is_open:
+            state = bytes([0x01 if self.led.get() else 0x00])
+            self.ser.write(state)
+            response = self.ser.read()
+            if response and ord(response) == S_ERR:
+                showerror('Device Error', 'The device reported an invalid command.')
+
+if __name__ == '__main__':
+    app = App()
+    app.mainloop()
